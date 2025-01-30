@@ -265,6 +265,7 @@ struct TableMakerMC {
       // Muon track histograms before cuts
       if (fDoDetailedQA) {
         histClasses += "Muons_BeforeCuts;";
+        histClasses += "MftTracks;";//Debadatta
       }
       // Muon track histograms after cuts; one directory per cut
       if (fConfigHistOutput.fConfigQA) {
@@ -532,7 +533,7 @@ struct TableMakerMC {
       eventInfo(collision.globalIndex());
       if constexpr ((TEventFillMap & VarManager::ObjTypes::CollisionMultExtra) > 0) {
         multPV(collision.multNTracksHasITS(), collision.multNTracksHasTPC(), collision.multNTracksHasTOF(), collision.multNTracksHasTRD(),
-               collision.multNTracksITSOnly(), collision.multNTracksTPCOnly(), collision.multNTracksITSTPC(), collision.trackOccupancyInTimeRange());
+               collision.multNTracksITSOnly(), collision.multNTracksTPCOnly(), collision.multNTracksITSTPC(), collision.multNTracksPVetaHalf(), collision.trackOccupancyInTimeRange());
         multAll(collision.multAllTracksTPCOnly(), collision.multAllTracksITSTPC(),
                 0, 0, 0.0, 0.0, 0.0, 0.0, 0, 0, 0.0, 0.0, 0.0, 0.0);
       }
@@ -696,17 +697,17 @@ struct TableMakerMC {
   {
     // Skim MFT tracks
     // So far no cuts are applied here
-    for (const auto& assoc : mftAssocs) {
-      auto track = assoc.template mfttrack_as<MFTTracks>();
+    for (const auto& assoc : mftAssocs) {  // mftAssocs = A collection that maps MFT tracks to collisions.
+      auto track = assoc.template mfttrack_as<MFTTracks>();//Retrieves the MFT track from the association
 
       if (fConfigHistOutput.fConfigQA) {
-        VarManager::FillTrack<TMFTFillMap>(track);
-        fHistMan->FillHistClass("MftTracks", VarManager::fgValues);
+        VarManager::FillTrack<TMFTFillMap>(track);//Calls VarManager::FillTrack<TMFTFillMap>(track), which likely extracts relevant track variables.
+        fHistMan->FillHistClass("MftTracks", VarManager::fgValues);//Stores the extracted values in fHistMan->FillHistClass("MftTracks", VarManager::fgValues), recording the track’s properties.
       }
 
       // write the MFT track global index in the map for skimming (to make sure we have it just once)
-      if (fMftIndexMap.find(track.globalIndex()) == fMftIndexMap.end()) {
-        uint32_t reducedEventIdx = fCollIndexMap[collision.globalIndex()];
+      if (fMftIndexMap.find(track.globalIndex()) == fMftIndexMap.end()) {   //Checks if the track's global index already exists in fMftIndexMap (to avoid duplicate storage).
+        uint32_t reducedEventIdx = fCollIndexMap[collision.globalIndex()]; //Maps the collision’s global index to a reduced event index (possibly a compressed format for storage).
         mftTrack(reducedEventIdx, static_cast<uint64_t>(0), track.pt(), track.eta(), track.phi());
         // TODO: We are not writing the DCA at the moment, because this depends on the collision association
         mftTrackExtra(track.mftClusterSizesAndTrackFlags(), track.sign(), 0.0, 0.0, track.nClusters());
