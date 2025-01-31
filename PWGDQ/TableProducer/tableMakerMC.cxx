@@ -473,7 +473,7 @@ struct TableMakerMC {
                 0, 0, 0.0, 0.0, 0.0, 0.0, 0, 0, 0.0, 0.0, 0.0, 0.0);
       }
 
-      // loop over the MC truth tracks and find those that need to be written
+      // loop over the MC truth tracks and find those that need to be written 
       auto groupedMcTracks = mcTracks.sliceBy(perMcCollision, mcCollision.globalIndex());
       for (auto& mctrack : groupedMcTracks) {
         // check all the requested MC signals and fill a decision bit map

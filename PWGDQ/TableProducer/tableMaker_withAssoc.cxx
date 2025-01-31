@@ -876,7 +876,7 @@ struct TableMaker {
   template <uint32_t TTrackFillMap, typename TEvent, typename TBCs, typename TTracks>
   void skimTracks(TEvent const& collision, TBCs const& /*bcs*/, TTracks const& /*tracks*/, TrackAssoc const& assocs)
   {
-    // Skim the barrel tracks
+    // Skim the barrel tracks 
     // Loop over the collision-track associations, retrieve the track, and apply track cuts for selection
     //     One can apply here cuts which depend on the association (e.g. DCA), which will discard (hopefully most) wrong associations.
     //     Tracks are written only once, even if they constribute to more than one association

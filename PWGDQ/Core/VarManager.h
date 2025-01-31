@@ -226,7 +226,7 @@ class VarManager : public TObject
     kMultFDDA,
     kMultFDDC,
     kMultZNA,
-    kMultZNC,
+    kMultZNC, 
     kMultTracklets,
     kMultDimuons,
     kMultNTracksHasITS,

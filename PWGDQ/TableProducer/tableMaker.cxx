@@ -466,7 +466,7 @@ struct TableMaker {
       }
     }
 
-    // fill stats information, after selections
+    // fill stats information, after selections 
     for (int i = 0; i < kNaliases; i++) {
       if (triggerAliases & (static_cast<uint32_t>(1) << i)) {
         (reinterpret_cast<TH2F*>(fStatsList->At(0)))->Fill(3.0, static_cast<float>(i));
