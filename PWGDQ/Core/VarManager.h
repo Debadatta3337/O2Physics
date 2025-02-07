@@ -241,6 +241,8 @@ class VarManager : public TObject
     kNoCollInTimeRangeStandard,
     kMultAllTracksTPCOnly,
     kMultAllTracksITSTPC,
+    kMultNTracksPVeta1,
+    kMultNTracksPVetaHalf,
     kNTPCpileupContribA,
     kNTPCpileupContribC,
     kNTPCpileupZA,
@@ -1512,6 +1514,8 @@ void VarManager::FillEvent(T const& event, float* values)
     values[kMultNTracksITSOnly] = event.multNTracksITSOnly();
     values[kMultNTracksTPCOnly] = event.multNTracksTPCOnly();
     values[kMultNTracksITSTPC] = event.multNTracksITSTPC();
+    values[kMultNTracksPVeta1] = event.multNTracksPVeta1();
+    values[kMultNTracksPVetaHalf] = event.multNTracksPVetaHalf();
     values[kMultAllTracksTPCOnly] = event.multAllTracksTPCOnly();
     values[kMultAllTracksITSTPC] = event.multAllTracksITSTPC();
     values[kTrackOccupancyInTimeRange] = event.trackOccupancyInTimeRange();
