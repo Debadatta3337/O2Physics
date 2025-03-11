@@ -85,9 +85,9 @@ using MyMuons = soa::Join<aod::FwdTracks, aod::McFwdTrackLabels, aod::FwdTracksD
 using MyMuonsWithCov = soa::Join<aod::FwdTracks, aod::FwdTracksCov, aod::McFwdTrackLabels, aod::FwdTracksDCA>;
 
 using MyEvents = soa::Join<aod::Collisions, aod::EvSels, aod::McCollisionLabels>;
-using MyEventsWithMults = soa::Join<aod::Collisions, aod::EvSels, aod::Mults, aod::MultsExtra, aod::McCollisionLabels>;  
-//using MyEventsWithMults = soa::Join<aod::Collisions, aod::EvSels, aod::Mults, aod::MultsExtra, aod::McCollisionLabels, aod::MultMCExtras_001>;//Debadatta
-using MyMCEventsWithMults = aod::MultMCExtras_001;//Debadatta
+using MyEventsWithMults = soa::Join<aod::Collisions, aod::EvSels, aod::Mults, aod::MultsExtra, aod::McCollisionLabels>;
+// using MyEventsWithMults = soa::Join<aod::Collisions, aod::EvSels, aod::Mults, aod::MultsExtra, aod::McCollisionLabels, aod::MultMCExtras_001>;//Debadatta
+using MyMCEventsWithMults = aod::MultMCExtras_001; // Debadatta
 using MyMCCollisions = soa::Join<aod::McCollisions, aod::MultMCExtras>;
 using MyEventsWithCent = soa::Join<aod::Collisions, aod::EvSels, aod::CentFT0Cs, aod::McCollisionLabels>;
 using MyEventsWithCentAndMults = soa::Join<aod::Collisions, aod::EvSels, aod::CentFT0Cs, aod::Mults, aod::MultsExtra, aod::McCollisionLabels>;
@@ -99,7 +99,7 @@ constexpr static uint32_t gkEventFillMapWithMults = VarManager::ObjTypes::BC | V
 // constexpr static uint32_t gkEventFillMapWithCent = VarManager::ObjTypes::BC | VarManager::ObjTypes::Collision | VarManager::ObjTypes::CollisionCent;
 constexpr static uint32_t gkEventFillMapWithCentAndMults = VarManager::ObjTypes::BC | VarManager::ObjTypes::Collision | VarManager::ObjTypes::CollisionCent | VarManager::CollisionMult | VarManager::CollisionMultExtra;
 // constexpr static uint32_t gkEventMCFillMap = VarManager::ObjTypes::CollisionMC;
- constexpr static uint32_t gkEventMCFillMap = VarManager::ObjTypes::CollisionMultMC;//Debadatta
+constexpr static uint32_t gkEventMCFillMap = VarManager::ObjTypes::CollisionMultMC; // Debadatta
 
 // constexpr static uint32_t gkTrackFillMap = VarManager::ObjTypes::Track | VarManager::ObjTypes::TrackExtra | VarManager::ObjTypes::TrackDCA | VarManager::ObjTypes::TrackSelection | VarManager::ObjTypes::TrackPID;
 constexpr static uint32_t gkTrackFillMapWithCov = VarManager::ObjTypes::Track | VarManager::ObjTypes::TrackExtra | VarManager::ObjTypes::TrackDCA | VarManager::ObjTypes::TrackSelection | VarManager::ObjTypes::TrackCov | VarManager::ObjTypes::TrackPID;
@@ -115,7 +115,7 @@ struct TableMakerMC {
 
   Produces<ReducedMCEvents> eventMC;
   Produces<ReducedMCTracks> trackMC;
-  Produces<ReducedMCEventsExtra> multMCPV;//Debadatta
+  Produces<ReducedMCEventsExtra> multMCPV; // Debadatta
 
   Produces<ReducedEvents> event;
   Produces<ReducedEventsExtended> eventExtended;
@@ -491,8 +491,8 @@ struct TableMakerMC {
     } // end loop over mc stack
   }
 
-  template <uint32_t TEventFillMap, typename TEvents> 
-  void skimCollisions(TEvents const& collisions, BCsWithTimestamps const& /*bcs*/,  MyMCCollisions const& mcCollisions)  
+  template <uint32_t TEventFillMap, typename TEvents>
+  void skimCollisions(TEvents const& collisions, BCsWithTimestamps const& /*bcs*/, MyMCCollisions const& mcCollisions)
   {
     // Skim reconstructed collisions which are selected by the user specified cuts
 
@@ -1020,7 +1020,7 @@ struct TableMakerMC {
   void fullSkimming(TEvents const& collisions, BCsWithTimestamps const& bcs,
                     TTracks const& tracksBarrel, TMuons const& muons, TMFTTracks const& mftTracks,
                     TTrackAssoc const& trackAssocs, TFwdTrackAssoc const& fwdTrackAssocs, TMFTTrackAssoc const& mftAssocs,
-                     MyMCCollisions const& mcCollisions, aod::McParticles const& mcParticles)   
+                    MyMCCollisions const& mcCollisions, aod::McParticles const& mcParticles)
 
   {
     // Check whether the run changed and update CCDB if it did
@@ -1267,16 +1267,16 @@ struct TableMakerMC {
   void processPP(MyEventsWithMults const& collisions, aod::BCsWithTimestamps const& bcs,
                  MyBarrelTracksWithCov const& tracksBarrel, MyMuonsWithCov const& tracksMuon, MFTTrackLabeled const& mftTracks,
                  aod::TrackAssoc const& trackAssocs, aod::FwdTrackAssoc const& fwdTrackAssocs, aod::MFTTrackAssoc const& mftAssocs,
-                 MyMCCollisions const& mcCollisions, aod::McParticles const& mcParticles)   
+                 MyMCCollisions const& mcCollisions, aod::McParticles const& mcParticles)
   {
-        fullSkimming<gkEventFillMapWithMults, gkTrackFillMapWithCov, gkMuonFillMapWithCov, gkMFTFillMap>(collisions, bcs, tracksBarrel, tracksMuon, mftTracks, trackAssocs, fwdTrackAssocs, mftAssocs, mcCollisions, mcParticles);
+    fullSkimming<gkEventFillMapWithMults, gkTrackFillMapWithCov, gkMuonFillMapWithCov, gkMFTFillMap>(collisions, bcs, tracksBarrel, tracksMuon, mftTracks, trackAssocs, fwdTrackAssocs, mftAssocs, mcCollisions, mcParticles);
   }
 
   void processPPBarrelOnly(MyEventsWithMults const& collisions, aod::BCsWithTimestamps const& bcs,
                            MyBarrelTracksWithCov const& tracksBarrel, aod::TrackAssoc const& trackAssocs,
                            MyMCCollisions const& mcCollisions, aod::McParticles const& mcParticles, MyMCEventsWithMults const& collMults)
   {
-       fullSkimming<gkEventFillMapWithMults, gkTrackFillMapWithCov, 0u, 0u>(collisions, bcs, tracksBarrel, nullptr, nullptr, trackAssocs, nullptr, nullptr, mcCollisions, mcParticles);
+    fullSkimming<gkEventFillMapWithMults, gkTrackFillMapWithCov, 0u, 0u>(collisions, bcs, tracksBarrel, nullptr, nullptr, trackAssocs, nullptr, nullptr, mcCollisions, mcParticles);
   }
 
   void processPPMuonOnly(MyEventsWithMults const& collisions, aod::BCsWithTimestamps const& bcs,
@@ -1284,7 +1284,7 @@ struct TableMakerMC {
                          aod::FwdTrackAssoc const& fwdTrackAssocs, aod::MFTTrackAssoc const& mftAssocs,
                          MyMCCollisions const& mcCollisions, aod::McParticles const& mcParticles)
   {
-        fullSkimming<gkEventFillMapWithMults, 0u, gkMuonFillMapWithCov, gkMFTFillMap>(collisions, bcs, nullptr, tracksMuon, mftTracks, nullptr, fwdTrackAssocs, mftAssocs, mcCollisions, mcParticles);
+    fullSkimming<gkEventFillMapWithMults, 0u, gkMuonFillMapWithCov, gkMFTFillMap>(collisions, bcs, nullptr, tracksMuon, mftTracks, nullptr, fwdTrackAssocs, mftAssocs, mcCollisions, mcParticles);
   }
 
   void processPbPb(MyEventsWithCentAndMults const& collisions, aod::BCsWithTimestamps const& bcs,
@@ -1292,14 +1292,14 @@ struct TableMakerMC {
                    aod::TrackAssoc const& trackAssocs, aod::FwdTrackAssoc const& fwdTrackAssocs, aod::MFTTrackAssoc const& mftAssocs,
                    MyMCCollisions const& mcCollisions, aod::McParticles const& mcParticles)
   {
-     fullSkimming<gkEventFillMapWithCentAndMults, gkTrackFillMapWithCov, gkMuonFillMapWithCov, gkMFTFillMap>(collisions, bcs, tracksBarrel, tracksMuon, mftTracks, trackAssocs, fwdTrackAssocs, mftAssocs, mcCollisions, mcParticles);
+    fullSkimming<gkEventFillMapWithCentAndMults, gkTrackFillMapWithCov, gkMuonFillMapWithCov, gkMFTFillMap>(collisions, bcs, tracksBarrel, tracksMuon, mftTracks, trackAssocs, fwdTrackAssocs, mftAssocs, mcCollisions, mcParticles);
   }
 
   void processPbPbBarrelOnly(MyEventsWithCentAndMults const& collisions, aod::BCsWithTimestamps const& bcs,
                              MyBarrelTracksWithCov const& tracksBarrel, aod::TrackAssoc const& trackAssocs,
                              MyMCCollisions const& mcCollisions, aod::McParticles const& mcParticles)
   {
-      fullSkimming<gkEventFillMapWithCentAndMults, gkTrackFillMapWithCov, 0u, 0u>(collisions, bcs, tracksBarrel, nullptr, nullptr, trackAssocs, nullptr, nullptr, mcCollisions, mcParticles);
+    fullSkimming<gkEventFillMapWithCentAndMults, gkTrackFillMapWithCov, 0u, 0u>(collisions, bcs, tracksBarrel, nullptr, nullptr, trackAssocs, nullptr, nullptr, mcCollisions, mcParticles);
   }
 
   void processPbPbMuonOnly(MyEventsWithCentAndMults const& collisions, aod::BCsWithTimestamps const& bcs,
@@ -1307,7 +1307,7 @@ struct TableMakerMC {
                            aod::FwdTrackAssoc const& fwdTrackAssocs, aod::MFTTrackAssoc const& mftAssocs,
                            MyMCCollisions const& mcCollisions, aod::McParticles const& mcParticles)
   {
-     fullSkimming<gkEventFillMapWithCentAndMults, 0u, gkMuonFillMapWithCov, gkMFTFillMap>(collisions, bcs, nullptr, tracksMuon, mftTracks, nullptr, fwdTrackAssocs, mftAssocs, mcCollisions, mcParticles);
+    fullSkimming<gkEventFillMapWithCentAndMults, 0u, gkMuonFillMapWithCov, gkMFTFillMap>(collisions, bcs, nullptr, tracksMuon, mftTracks, nullptr, fwdTrackAssocs, mftAssocs, mcCollisions, mcParticles);
   }
 
   // Process the BCs and store stats for luminosity retrieval -----------------------------------------------------------------------------------
