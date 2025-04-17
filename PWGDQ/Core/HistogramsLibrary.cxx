@@ -91,6 +91,7 @@ void o2::aod::dqhistograms::DefineHistograms(HistogramManager* hm, const char* h
         hm->AddHistogram(histClass, "MultFDDC", "MultFDDC", false, 50, 0.0, 50.0, VarManager::kMultFDDC);
         hm->AddHistogram(histClass, "MultTracklets", "MultTracklets", false, 250, 0.0, 250.0, VarManager::kMultTracklets);
         hm->AddHistogram(histClass, "VtxNContribReal", "Vtx n contributors", false, 200, 0.0, 200.0, VarManager::kVtxNcontribReal);
+        hm->AddHistogram(histClass, "MultMCNParticlesEta08", "MultMCNParticlesEta08", false, 200, 0.0, 200.0, VarManager::kMultMCNParticlesEta08);
         hm->AddHistogram(histClass, "VtxNContrib", "Vtx n contributors", false, 100, 0.0, 100.0, VarManager::kVtxNcontrib);
         hm->AddHistogram(histClass, "MultNTracksPVeta1", "MultNTracksPVeta1", false, 200, 0, 200.0, VarManager::kMultNTracksPVeta1);
         hm->AddHistogram(histClass, "MultNTracksPVetaHalf", "MultNTracksPVetaHalf", false, 200, 0, 200.0, VarManager::kMultNTracksPVetaHalf);
@@ -113,6 +114,8 @@ void o2::aod::dqhistograms::DefineHistograms(HistogramManager* hm, const char* h
         hm->AddHistogram(histClass, "VtxZ_MultITSTPCWithPV", "VtxZ vs MultITSTPCWithPV", false, 240, -12.0, 12.0, VarManager::kVtxZ, 400, 0, 400.0, VarManager::kMultNTracksITSTPC);
         hm->AddHistogram(histClass, "VtxZ_MultITSOnly", "VtxZ vs MultITSOnly", false, 240, -12.0, 12.0, VarManager::kVtxZ, 400, 0, 400.0, VarManager::kMultNTracksITSOnly);
         hm->AddHistogram(histClass, "VtxZ_VtxNcontribReal", "VtxZ vs VtxNcontribReal", false, 240, -12.0, 12.0, VarManager::kVtxZ, 200, 0, 200.0, VarManager::kVtxNcontribReal);
+        hm->AddHistogram(histClass, "VtxZ_MultMCNParticlesEta08", "VtxZ vs MultMCNParticlesEta08", false, 240, -12.0, 12.0, VarManager::kVtxZ, 150, 0, 150.0, VarManager::kMultMCNParticlesEta08);
+        hm->AddHistogram(histClass, "VtxNContribReal_MultMCNParticlesEta08", "VtxNContribReal vs MultMCNParticlesEta08", false, 200, 0.0, 200.0, VarManager::kVtxNcontribReal, 200, 0.0, 200.0, VarManager::kMultMCNParticlesEta08);
 
       } else {
         hm->AddHistogram(histClass, "MultTPC", "MultTPC", false, 200, 0.0, 50000.0, VarManager::kMultTPC);
