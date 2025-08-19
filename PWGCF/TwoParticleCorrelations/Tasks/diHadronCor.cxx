@@ -28,7 +28,6 @@
 #include "Common/DataModel/EventSelection.h"
 #include "Common/DataModel/Multiplicity.h"
 #include "Common/DataModel/PIDResponse.h"
-#include "Common/DataModel/PIDResponseITS.h"
 #include "Common/DataModel/TrackSelectionTables.h"
 
 #include "CommonConstants/MathConstants.h"
@@ -41,8 +40,6 @@
 #include "Framework/RunningWorkflowInfo.h"
 #include "Framework/StepTHn.h"
 #include "Framework/runDataProcessing.h"
-#include "ReconstructionDataFormats/PID.h"
-#include "ReconstructionDataFormats/Track.h"
 #include <CCDB/BasicCCDBManager.h>
 
 #include "TF1.h"
@@ -98,14 +95,42 @@ struct DiHadronCor {
   O2_DEFINE_CONFIGURABLE(cfgCutOccupancyHigh, int, 2000, "High cut on TPC occupancy")
   O2_DEFINE_CONFIGURABLE(cfgCutOccupancyLow, int, 0, "Low cut on TPC occupancy")
   O2_DEFINE_CONFIGURABLE(cfgEfficiency, std::string, "", "CCDB path to efficiency object")
+  O2_DEFINE_CONFIGURABLE(cfgCentralityWeight, std::string, "", "CCDB path to centrality weight object")
   O2_DEFINE_CONFIGURABLE(cfgLocalEfficiency, bool, false, "Use local efficiency object")
   O2_DEFINE_CONFIGURABLE(cfgVerbosity, bool, false, "Verbose output")
   O2_DEFINE_CONFIGURABLE(cfgUseEventWeights, bool, false, "Use event weights for mixed event")
   O2_DEFINE_CONFIGURABLE(cfgUsePtOrder, bool, true, "enable trigger pT < associated pT cut")
   O2_DEFINE_CONFIGURABLE(cfgUsePtOrderInMixEvent, bool, true, "enable trigger pT < associated pT cut in mixed event")
-  O2_DEFINE_CONFIGURABLE(cfgPIDUseITSPID, bool, true, "Use ITS PID for particle identification")
-  O2_DEFINE_CONFIGURABLE(cfgPIDTofPtCut, float, 0.5f, "Minimum pt to use TOF N-sigma")
-  O2_DEFINE_CONFIGURABLE(cfgPIDParticle, int, 0, "1 = pion, 2 = kaon, 3 = proton, 0 for no PID")
+  struct : ConfigurableGroup {
+    O2_DEFINE_CONFIGURABLE(cfgMultCentHighCutFunction, std::string, "[0] + [1]*x + [2]*x*x + [3]*x*x*x + [4]*x*x*x*x + 10.*([5] + [6]*x + [7]*x*x + [8]*x*x*x + [9]*x*x*x*x)", "Functional for multiplicity correlation cut");
+    O2_DEFINE_CONFIGURABLE(cfgMultCentLowCutFunction, std::string, "[0] + [1]*x + [2]*x*x + [3]*x*x*x + [4]*x*x*x*x - 3.*([5] + [6]*x + [7]*x*x + [8]*x*x*x + [9]*x*x*x*x)", "Functional for multiplicity correlation cut");
+    O2_DEFINE_CONFIGURABLE(cfgMultT0CCutEnabled, bool, false, "Enable Global multiplicity vs T0C centrality cut")
+    Configurable<std::vector<double>> cfgMultT0CCutPars{"cfgMultT0CCutPars", std::vector<double>{143.04, -4.58368, 0.0766055, -0.000727796, 2.86153e-06, 23.3108, -0.36304, 0.00437706, -4.717e-05, 1.98332e-07}, "Global multiplicity vs T0C centrality cut parameter values"};
+    O2_DEFINE_CONFIGURABLE(cfgMultPVT0CCutEnabled, bool, false, "Enable PV multiplicity vs T0C centrality cut")
+    Configurable<std::vector<double>> cfgMultPVT0CCutPars{"cfgMultPVT0CCutPars", std::vector<double>{195.357, -6.15194, 0.101313, -0.000955828, 3.74793e-06, 30.0326, -0.43322, 0.00476265, -5.11206e-05, 2.13613e-07}, "PV multiplicity vs T0C centrality cut parameter values"};
+    O2_DEFINE_CONFIGURABLE(cfgMultMultPVHighCutFunction, std::string, "[0]+[1]*x + 5.*([2]+[3]*x)", "Functional for multiplicity correlation cut");
+    O2_DEFINE_CONFIGURABLE(cfgMultMultPVLowCutFunction, std::string, "[0]+[1]*x - 5.*([2]+[3]*x)", "Functional for multiplicity correlation cut");
+    O2_DEFINE_CONFIGURABLE(cfgMultGlobalPVCutEnabled, bool, false, "Enable global multiplicity vs PV multiplicity cut")
+    Configurable<std::vector<double>> cfgMultGlobalPVCutPars{"cfgMultGlobalPVCutPars", std::vector<double>{-0.140809, 0.734344, 2.77495, 0.0165935}, "PV multiplicity vs T0C centrality cut parameter values"};
+    O2_DEFINE_CONFIGURABLE(cfgMultMultV0AHighCutFunction, std::string, "[0] + [1]*x + [2]*x*x + [3]*x*x*x + [4]*x*x*x*x + 4.*([5] + [6]*x + [7]*x*x + [8]*x*x*x + [9]*x*x*x*x)", "Functional for multiplicity correlation cut");
+    O2_DEFINE_CONFIGURABLE(cfgMultMultV0ALowCutFunction, std::string, "[0] + [1]*x + [2]*x*x + [3]*x*x*x + [4]*x*x*x*x - 3.*([5] + [6]*x + [7]*x*x + [8]*x*x*x + [9]*x*x*x*x)", "Functional for multiplicity correlation cut");
+    O2_DEFINE_CONFIGURABLE(cfgMultMultV0ACutEnabled, bool, false, "Enable global multiplicity vs V0A multiplicity cut")
+    Configurable<std::vector<double>> cfgMultMultV0ACutPars{"cfgMultMultV0ACutPars", std::vector<double>{534.893, 184.344, 0.423539, -0.00331436, 5.34622e-06, 871.239, 53.3735, -0.203528, 0.000122758, 5.41027e-07}, "Global multiplicity vs V0A multiplicity cut parameter values"};
+    std::vector<double> multT0CCutPars;
+    std::vector<double> multPVT0CCutPars;
+    std::vector<double> multGlobalPVCutPars;
+    std::vector<double> multMultV0ACutPars;
+    TF1* fMultPVT0CCutLow = nullptr;
+    TF1* fMultPVT0CCutHigh = nullptr;
+    TF1* fMultT0CCutLow = nullptr;
+    TF1* fMultT0CCutHigh = nullptr;
+    TF1* fMultGlobalPVCutLow = nullptr;
+    TF1* fMultGlobalPVCutHigh = nullptr;
+    TF1* fMultMultV0ACutLow = nullptr;
+    TF1* fMultMultV0ACutHigh = nullptr;
+    TF1* fT0AV0AMean = nullptr;
+    TF1* fT0AV0ASigma = nullptr;
+  } cfgFuncParas;
 
   SliceCache cache;
 
@@ -120,9 +145,6 @@ struct DiHadronCor {
   ConfigurableAxis axisVtxMix{"axisVtxMix", {VARIABLE_WIDTH, -10, -9, -8, -7, -6, -5, -4, -3, -2, -1, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10}, "vertex axis for mixed event histograms"};
   ConfigurableAxis axisMultMix{"axisMultMix", {VARIABLE_WIDTH, 0, 10, 20, 40, 60, 80, 100, 120, 140, 160, 180, 200, 220, 240, 260}, "multiplicity / centrality axis for mixed event histograms"};
   ConfigurableAxis axisSample{"axisSample", {cfgSampleSize, 0, cfgSampleSize}, "sample axis for histograms"};
-  Configurable<std::vector<double>> pidTofNsigmaCut{"pidTofNsigmaCut", std::vector<double>{1.5, 1.5, 1.5, -1.5, -1.5, -1.5}, "TOF n-sigma cut for pions_posNsigma, kaons_posNsigma, protons_posNsigma, pions_negNsigma, kaons_negNsigma, protons_negNsigma"};
-  Configurable<std::vector<double>> pidItsNsigmaCut{"pidItsNsigmaCut", std::vector<double>{3, 3, 3, -3, -3, -3}, "ITS n-sigma cut for pions_posNsigma, kaons_posNsigma, protons_posNsigma, pions_negNsigma, kaons_negNsigma, protons_negNsigma"};
-  Configurable<std::vector<double>> pidTpcNsigmaCut{"pidTpcNsigmaCut", std::vector<double>{10, 10, 10, -10, -10, -10}, "TOF n-sigma cut for pions_posNsigma, kaons_posNsigma, protons_posNsigma, pions_negNsigma, kaons_negNsigma, protons_negNsigma"};
 
   ConfigurableAxis axisVertexEfficiency{"axisVertexEfficiency", {10, -10, 10}, "vertex axis for efficiency histograms"};
   ConfigurableAxis axisEtaEfficiency{"axisEtaEfficiency", {20, -1.0, 1.0}, "eta axis for efficiency histograms"};
@@ -132,7 +154,7 @@ struct DiHadronCor {
   Filter collisionFilter = (nabs(aod::collision::posZ) < cfgCutVtxZ);
   Filter trackFilter = (nabs(aod::track::eta) < cfgCutEta) && (aod::track::pt > cfgCutPtMin) && (aod::track::pt < cfgCutPtMax) && ((requireGlobalTrackInFilter()) || (aod::track::isGlobalTrackSDD == (uint8_t) true)) && (aod::track::tpcChi2NCl < cfgCutChi2prTPCcls) && (nabs(aod::track::dcaZ) < cfgCutDCAz);
   using FilteredCollisions = soa::Filtered<soa::Join<aod::Collisions, aod::EvSel, aod::CentFT0Cs, aod::CentFT0CVariant1s, aod::CentFT0Ms, aod::CentFV0As, aod::Mults>>;
-  using FilteredTracks = soa::Filtered<soa::Join<aod::Tracks, aod::TrackSelection, aod::TracksExtra, aod::TracksDCA, aod::pidTPCFullPi, aod::pidTPCFullKa, aod::pidTPCFullPr, aod::pidTOFbeta, aod::pidTOFFullPi, aod::pidTOFFullKa, aod::pidTOFFullPr>>;
+  using FilteredTracks = soa::Filtered<soa::Join<aod::Tracks, aod::TrackSelection, aod::TracksExtra, aod::TracksDCA>>;
   using FilteredTracksWithMCLabels = soa::Filtered<soa::Join<aod::Tracks, aod::TrackSelection, aod::TracksExtra, aod::TracksDCA, aod::McTrackLabels>>;
 
   // Filter for MCParticle
@@ -150,6 +172,7 @@ struct DiHadronCor {
 
   // Corrections
   TH3D* mEfficiency = nullptr;
+  TH1D* mCentralityWeight = nullptr;
   bool correctionsLoaded = false;
 
   // Define the outputs
@@ -171,27 +194,9 @@ struct DiHadronCor {
     SameEvent = 1,
     MixedEvent = 3
   };
-  std::vector<double> tofNsigmaCut;
-  std::vector<double> itsNsigmaCut;
-  std::vector<double> tpcNsigmaCut;
-  o2::aod::ITSResponse itsResponse;
-  enum Particles {
-    PIONS,
-    KAONS,
-    PROTONS
-  };
 
   // persistent caches
   std::vector<float> efficiencyAssociatedCache;
-
-  // Additional Event selection cuts - Copy from flowGenericFramework.cxx
-  TF1* fMultPVCutLow = nullptr;
-  TF1* fMultPVCutHigh = nullptr;
-  TF1* fMultCutLow = nullptr;
-  TF1* fMultCutHigh = nullptr;
-  TF1* fMultMultPVCut = nullptr;
-  TF1* fT0AV0AMean = nullptr;
-  TF1* fT0AV0ASigma = nullptr;
 
   void init(InitContext&)
   {
@@ -225,21 +230,35 @@ struct DiHadronCor {
       registry.get<TH1>(HIST("hEventCountSpecific"))->GetXaxis()->SetBinLabel(12, "cfgEvSelV0AT0ACut");
     }
 
-    if (cfgUseAdditionalEventCut) {
-      fMultPVCutLow = new TF1("fMultPVCutLow", "[0]+[1]*x+[2]*x*x+[3]*x*x*x+[4]*x*x*x*x - 3.5*([5]+[6]*x+[7]*x*x+[8]*x*x*x+[9]*x*x*x*x)", 0, 100);
-      fMultPVCutLow->SetParameters(3257.29, -121.848, 1.98492, -0.0172128, 6.47528e-05, 154.756, -1.86072, -0.0274713, 0.000633499, -3.37757e-06);
-      fMultPVCutHigh = new TF1("fMultPVCutHigh", "[0]+[1]*x+[2]*x*x+[3]*x*x*x+[4]*x*x*x*x + 3.5*([5]+[6]*x+[7]*x*x+[8]*x*x*x+[9]*x*x*x*x)", 0, 100);
-      fMultPVCutHigh->SetParameters(3257.29, -121.848, 1.98492, -0.0172128, 6.47528e-05, 154.756, -1.86072, -0.0274713, 0.000633499, -3.37757e-06);
+    if (cfgEvSelMultCorrelation) {
+      cfgFuncParas.multT0CCutPars = cfgFuncParas.cfgMultT0CCutPars;
+      cfgFuncParas.multPVT0CCutPars = cfgFuncParas.cfgMultPVT0CCutPars;
+      cfgFuncParas.multGlobalPVCutPars = cfgFuncParas.cfgMultGlobalPVCutPars;
+      cfgFuncParas.multMultV0ACutPars = cfgFuncParas.cfgMultMultV0ACutPars;
+      cfgFuncParas.fMultPVT0CCutLow = new TF1("fMultPVT0CCutLow", cfgFuncParas.cfgMultCentLowCutFunction->c_str(), 0, 100);
+      cfgFuncParas.fMultPVT0CCutLow->SetParameters(&(cfgFuncParas.multPVT0CCutPars[0]));
+      cfgFuncParas.fMultPVT0CCutHigh = new TF1("fMultPVT0CCutHigh", cfgFuncParas.cfgMultCentHighCutFunction->c_str(), 0, 100);
+      cfgFuncParas.fMultPVT0CCutHigh->SetParameters(&(cfgFuncParas.multPVT0CCutPars[0]));
 
-      fMultCutLow = new TF1("fMultCutLow", "[0]+[1]*x+[2]*x*x+[3]*x*x*x - 2.*([4]+[5]*x+[6]*x*x+[7]*x*x*x+[8]*x*x*x*x)", 0, 100);
-      fMultCutLow->SetParameters(1654.46, -47.2379, 0.449833, -0.0014125, 150.773, -3.67334, 0.0530503, -0.000614061, 3.15956e-06);
-      fMultCutHigh = new TF1("fMultCutHigh", "[0]+[1]*x+[2]*x*x+[3]*x*x*x + 3.*([4]+[5]*x+[6]*x*x+[7]*x*x*x+[8]*x*x*x*x)", 0, 100);
-      fMultCutHigh->SetParameters(1654.46, -47.2379, 0.449833, -0.0014125, 150.773, -3.67334, 0.0530503, -0.000614061, 3.15956e-06);
+      cfgFuncParas.fMultT0CCutLow = new TF1("fMultT0CCutLow", cfgFuncParas.cfgMultCentLowCutFunction->c_str(), 0, 100);
+      cfgFuncParas.fMultT0CCutLow->SetParameters(&(cfgFuncParas.multT0CCutPars[0]));
+      cfgFuncParas.fMultT0CCutHigh = new TF1("fMultT0CCutHigh", cfgFuncParas.cfgMultCentHighCutFunction->c_str(), 0, 100);
+      cfgFuncParas.fMultT0CCutHigh->SetParameters(&(cfgFuncParas.multT0CCutPars[0]));
 
-      fT0AV0AMean = new TF1("fT0AV0AMean", "[0]+[1]*x", 0, 200000);
-      fT0AV0AMean->SetParameters(-1601.0581, 9.417652e-01);
-      fT0AV0ASigma = new TF1("fT0AV0ASigma", "[0]+[1]*x+[2]*x*x+[3]*x*x*x+[4]*x*x*x*x", 0, 200000);
-      fT0AV0ASigma->SetParameters(463.4144, 6.796509e-02, -9.097136e-07, 7.971088e-12, -2.600581e-17);
+      cfgFuncParas.fMultGlobalPVCutLow = new TF1("fMultGlobalPVCutLow", cfgFuncParas.cfgMultMultPVLowCutFunction->c_str(), 0, 4000);
+      cfgFuncParas.fMultGlobalPVCutLow->SetParameters(&(cfgFuncParas.multGlobalPVCutPars[0]));
+      cfgFuncParas.fMultGlobalPVCutHigh = new TF1("fMultGlobalPVCutHigh", cfgFuncParas.cfgMultMultPVHighCutFunction->c_str(), 0, 4000);
+      cfgFuncParas.fMultGlobalPVCutHigh->SetParameters(&(cfgFuncParas.multGlobalPVCutPars[0]));
+
+      cfgFuncParas.fMultMultV0ACutLow = new TF1("fMultMultV0ACutLow", cfgFuncParas.cfgMultMultV0ALowCutFunction->c_str(), 0, 4000);
+      cfgFuncParas.fMultMultV0ACutLow->SetParameters(&(cfgFuncParas.multMultV0ACutPars[0]));
+      cfgFuncParas.fMultMultV0ACutHigh = new TF1("fMultMultV0ACutHigh", cfgFuncParas.cfgMultMultV0AHighCutFunction->c_str(), 0, 4000);
+      cfgFuncParas.fMultMultV0ACutHigh->SetParameters(&(cfgFuncParas.multMultV0ACutPars[0]));
+
+      cfgFuncParas.fT0AV0AMean = new TF1("fT0AV0AMean", "[0]+[1]*x", 0, 200000);
+      cfgFuncParas.fT0AV0AMean->SetParameters(-1601.0581, 9.417652e-01);
+      cfgFuncParas.fT0AV0ASigma = new TF1("fT0AV0ASigma", "[0]+[1]*x+[2]*x*x+[3]*x*x*x+[4]*x*x*x*x", 0, 200000);
+      cfgFuncParas.fT0AV0ASigma->SetParameters(463.4144, 6.796509e-02, -9.097136e-07, 7.971088e-12, -2.600581e-17);
     }
 
     std::string hCentTitle = "Centrality distribution, Estimator " + std::to_string(cfgCentEstimator);
@@ -254,8 +273,9 @@ struct DiHadronCor {
       registry.add("pTCorrected", "pTCorrected", {HistType::kTH1D, {axisPtTrigger}});
       registry.add("Nch", "N_{ch}", {HistType::kTH1D, {axisMultiplicity}});
       registry.add("Nch_used", "N_{ch}", {HistType::kTH1D, {axisMultiplicity}}); // histogram to see how many events are in the same and mixed event
-      registry.add("Centrality", hCentTitle.c_str(), {HistType::kTH1D, {axisCentrality}});
-      registry.add("Centrality_used", hCentTitle.c_str(), {HistType::kTH1D, {axisCentrality}}); // histogram to see how many events are in the same and mixed event
+      registry.add("Centrality", hCentTitle.c_str(), {HistType::kTH1D, {{100, 0, 100}}});
+      registry.add("CentralityWeighted", hCentTitle.c_str(), {HistType::kTH1D, {{100, 0, 100}}});
+      registry.add("Centrality_used", hCentTitle.c_str(), {HistType::kTH1D, {{100, 0, 100}}}); // histogram to see how many events are in the same and mixed event
       registry.add("zVtx", "zVtx", {HistType::kTH1D, {axisVertex}});
       registry.add("zVtx_used", "zVtx_used", {HistType::kTH1D, {axisVertex}});
       registry.add("Trig_hist", "", {HistType::kTHnSparseF, {{axisSample, axisVertex, axisPtTrigger}}});
@@ -310,10 +330,6 @@ struct DiHadronCor {
     same.setObject(new CorrelationContainer("sameEvent", "sameEvent", corrAxis, effAxis, userAxis));
     mixed.setObject(new CorrelationContainer("mixedEvent", "mixedEvent", corrAxis, effAxis, userAxis));
 
-    tofNsigmaCut = pidTofNsigmaCut;
-    itsNsigmaCut = pidItsNsigmaCut;
-    tpcNsigmaCut = pidTpcNsigmaCut;
-
     LOGF(info, "End of init");
   }
 
@@ -358,9 +374,6 @@ struct DiHadronCor {
   template <typename TTrack>
   bool trackSelected(TTrack track)
   {
-    if (cfgPIDParticle && getNsigmaPID(track) != cfgPIDParticle) {
-      return false;
-    }
     return ((track.tpcNClsFound() >= cfgCutTPCclu) && (track.tpcNClsCrossedRows() >= cfgCutTPCCrossedRows) && (track.itsNCls() >= cfgCutITSclu));
   }
 
@@ -382,7 +395,7 @@ struct DiHadronCor {
     return true;
   }
 
-  void loadEfficiency(uint64_t timestamp)
+  void loadCorrection(uint64_t timestamp)
   {
     if (correctionsLoaded) {
       return;
@@ -398,6 +411,13 @@ struct DiHadronCor {
         LOGF(fatal, "Could not load efficiency histogram for trigger particles from %s", cfgEfficiency.value.c_str());
       }
       LOGF(info, "Loaded efficiency histogram from %s (%p)", cfgEfficiency.value.c_str(), (void*)mEfficiency);
+    }
+    if (cfgCentralityWeight.value.empty() == false) {
+      mCentralityWeight = ccdb->getForTimeStamp<TH1D>(cfgCentralityWeight, timestamp);
+      if (mCentralityWeight == nullptr) {
+        LOGF(fatal, "Could not load efficiency histogram for trigger particles from %s", cfgCentralityWeight.value.c_str());
+      }
+      LOGF(info, "Loaded efficiency histogram from %s (%p)", cfgCentralityWeight.value.c_str(), (void*)mCentralityWeight);
     }
     correctionsLoaded = true;
   }
@@ -416,6 +436,19 @@ struct DiHadronCor {
     if (eff == 0)
       return false;
     weight_nue = 1. / eff;
+    return true;
+  }
+
+  bool getCentralityWeight(float& weightCent, const float centrality)
+  {
+    float weight = 1.;
+    if (mCentralityWeight)
+      weight = mCentralityWeight->GetBinContent(mCentralityWeight->FindBin(centrality));
+    else
+      weight = 1.0;
+    if (weight == 0)
+      return false;
+    weightCent = weight;
     return true;
   }
 
@@ -659,21 +692,37 @@ struct DiHadronCor {
 
     auto multNTracksPV = collision.multNTracksPV();
     if (cfgEvSelMultCorrelation) {
-      if (multNTracksPV < fMultPVCutLow->Eval(centrality))
-        return 0;
-      if (multNTracksPV > fMultPVCutHigh->Eval(centrality))
-        return 0;
-      if (multTrk < fMultCutLow->Eval(centrality))
-        return 0;
-      if (multTrk > fMultCutHigh->Eval(centrality))
-        return 0;
+      if (cfgFuncParas.cfgMultPVT0CCutEnabled && !cfgCentTableUnavailable) {
+        if (multNTracksPV < cfgFuncParas.fMultPVT0CCutLow->Eval(centrality))
+          return 0;
+        if (multNTracksPV > cfgFuncParas.fMultPVT0CCutHigh->Eval(centrality))
+          return 0;
+      }
+      if (cfgFuncParas.cfgMultT0CCutEnabled && !cfgCentTableUnavailable) {
+        if (multTrk < cfgFuncParas.fMultT0CCutLow->Eval(centrality))
+          return 0;
+        if (multTrk > cfgFuncParas.fMultT0CCutHigh->Eval(centrality))
+          return 0;
+      }
+      if (cfgFuncParas.cfgMultGlobalPVCutEnabled) {
+        if (multTrk < cfgFuncParas.fMultGlobalPVCutLow->Eval(multNTracksPV))
+          return 0;
+        if (multTrk > cfgFuncParas.fMultGlobalPVCutHigh->Eval(multNTracksPV))
+          return 0;
+      }
+      if (cfgFuncParas.cfgMultMultV0ACutEnabled) {
+        if (collision.multFV0A() < cfgFuncParas.fMultMultV0ACutLow->Eval(multTrk))
+          return 0;
+        if (collision.multFV0A() > cfgFuncParas.fMultMultV0ACutHigh->Eval(multTrk))
+          return 0;
+      }
     }
     if (fillCounter && cfgEvSelMultCorrelation)
       registry.fill(HIST("hEventCountSpecific"), 10.5);
 
     // V0A T0A 5 sigma cut
     float sigma = 5.0;
-    if (cfgEvSelV0AT0ACut && (std::fabs(collision.multFV0A() - fT0AV0AMean->Eval(collision.multFT0A())) > sigma * fT0AV0ASigma->Eval(collision.multFT0A())))
+    if (cfgEvSelV0AT0ACut && (std::fabs(collision.multFV0A() - cfgFuncParas.fT0AV0AMean->Eval(collision.multFT0A())) > sigma * cfgFuncParas.fT0AV0ASigma->Eval(collision.multFT0A())))
       return 0;
     if (fillCounter && cfgEvSelV0AT0ACut)
       registry.fill(HIST("hEventCountSpecific"), 11.5);
@@ -687,13 +736,18 @@ struct DiHadronCor {
       return;
     auto bc = collision.bc_as<aod::BCsWithTimestamps>();
     float cent = -1.;
-    if (!cfgCentTableUnavailable)
+    float weightCent = 1.0f;
+    if (!cfgCentTableUnavailable) {
       cent = getCentrality(collision);
+    }
     if (cfgUseAdditionalEventCut && !eventSelected(collision, tracks.size(), cent, true))
       return;
-
-    if (!cfgCentTableUnavailable)
+    loadCorrection(bc.timestamp());
+    if (!cfgCentTableUnavailable) {
+      getCentralityWeight(weightCent, cent);
       registry.fill(HIST("Centrality"), cent);
+      registry.fill(HIST("CentralityWeighted"), cent, weightCent);
+    }
     registry.fill(HIST("Nch"), tracks.size());
     registry.fill(HIST("zVtx"), collision.posZ());
 
@@ -704,12 +758,11 @@ struct DiHadronCor {
       return;
     }
 
-    loadEfficiency(bc.timestamp());
     registry.fill(HIST("eventcount"), SameEvent); // because its same event i put it in the 1 bin
     fillYield(collision, tracks);
 
     same->fillEvent(tracks.size(), CorrelationContainer::kCFStepReconstructed);
-    fillCorrelations<CorrelationContainer::kCFStepReconstructed>(tracks, tracks, collision.posZ(), SameEvent, getMagneticField(bc.timestamp()), cent, 1.0f);
+    fillCorrelations<CorrelationContainer::kCFStepReconstructed>(tracks, tracks, collision.posZ(), SameEvent, getMagneticField(bc.timestamp()), cent, weightCent);
   }
   PROCESS_SWITCH(DiHadronCor, processSame, "Process same event", true);
 
@@ -759,13 +812,16 @@ struct DiHadronCor {
 
       registry.fill(HIST("eventcount"), MixedEvent); // fill the mixed event in the 3 bin
       auto bc = collision1.bc_as<aod::BCsWithTimestamps>();
-      loadEfficiency(bc.timestamp());
+      loadCorrection(bc.timestamp());
       float eventWeight = 1.0f;
       if (cfgUseEventWeights) {
         eventWeight = 1.0f / it.currentWindowNeighbours();
       }
+      float weightCent = 1.0f;
+      if (!cfgCentTableUnavailable)
+        getCentralityWeight(weightCent, cent1);
 
-      fillCorrelations<CorrelationContainer::kCFStepReconstructed>(tracks1, tracks2, collision1.posZ(), MixedEvent, getMagneticField(bc.timestamp()), cent1, eventWeight);
+      fillCorrelations<CorrelationContainer::kCFStepReconstructed>(tracks1, tracks2, collision1.posZ(), MixedEvent, getMagneticField(bc.timestamp()), cent1, eventWeight * weightCent);
     }
   }
 
@@ -989,56 +1045,6 @@ struct DiHadronCor {
     }
   }
   PROCESS_SWITCH(DiHadronCor, processOntheflyMixed, "Process on-the-fly mixed events", false);
-
-  template <typename TTrack>
-  int getNsigmaPID(TTrack track)
-  {
-    // Computing Nsigma arrays for pion, kaon, and protons
-    std::array<float, 3> nSigmaTPC = {track.tpcNSigmaPi(), track.tpcNSigmaKa(), track.tpcNSigmaPr()};
-    std::array<float, 3> nSigmaTOF = {track.tofNSigmaPi(), track.tofNSigmaKa(), track.tofNSigmaPr()};
-    std::array<float, 3> nSigmaITS = {itsResponse.nSigmaITS<o2::track::PID::Pion>(track), itsResponse.nSigmaITS<o2::track::PID::Kaon>(track), itsResponse.nSigmaITS<o2::track::PID::Proton>(track)};
-    int pid = -1;
-
-    std::array<float, 3> nSigmaToUse = cfgPIDUseITSPID ? nSigmaITS : nSigmaTPC;            // Choose which nSigma to use: TPC or ITS
-    std::vector<double> detectorNsigmaCut = cfgPIDUseITSPID ? itsNsigmaCut : tpcNsigmaCut; // Choose which nSigma to use: TPC or ITS
-
-    bool isPion, isKaon, isProton;
-    bool isDetectedPion = nSigmaToUse[0] < detectorNsigmaCut[0] && nSigmaToUse[0] > detectorNsigmaCut[0 + 3];
-    bool isDetectedKaon = nSigmaToUse[1] < detectorNsigmaCut[1] && nSigmaToUse[1] > detectorNsigmaCut[1 + 3];
-    bool isDetectedProton = nSigmaToUse[2] < detectorNsigmaCut[2] && nSigmaToUse[2] > detectorNsigmaCut[2 + 3];
-
-    bool isTofPion = nSigmaTOF[0] < tofNsigmaCut[0] && nSigmaTOF[0] > tofNsigmaCut[0 + 3];
-    bool isTofKaon = nSigmaTOF[1] < tofNsigmaCut[1] && nSigmaTOF[1] > tofNsigmaCut[1 + 3];
-    bool isTofProton = nSigmaTOF[2] < tofNsigmaCut[2] && nSigmaTOF[2] > tofNsigmaCut[2 + 3];
-
-    if (track.pt() > cfgPIDTofPtCut && !track.hasTOF()) {
-      return 0;
-    } else if (track.pt() > cfgPIDTofPtCut && track.hasTOF()) {
-      isPion = isTofPion && isDetectedPion;
-      isKaon = isTofKaon && isDetectedKaon;
-      isProton = isTofProton && isDetectedProton;
-    } else {
-      isPion = isDetectedPion;
-      isKaon = isDetectedKaon;
-      isProton = isDetectedProton;
-    }
-
-    if ((isPion && isKaon) || (isPion && isProton) || (isKaon && isProton)) {
-      return 0; // more than one particle satisfy the criteria
-    }
-
-    if (isPion) {
-      pid = PIONS;
-    } else if (isKaon) {
-      pid = KAONS;
-    } else if (isProton) {
-      pid = PROTONS;
-    } else {
-      return 0; // no particle satisfies the criteria
-    }
-
-    return pid + 1; // shift the pid by 1, 1 = pion, 2 = kaon, 3 = proton
-  }
 };
 
 WorkflowSpec defineDataProcessing(ConfigContext const& cfgc)

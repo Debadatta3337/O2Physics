@@ -16,16 +16,31 @@
 #ifndef COMMON_TOOLS_TRACKPROPAGATIONMODULE_H_
 #define COMMON_TOOLS_TRACKPROPAGATIONMODULE_H_
 
-#include <memory>
-#include <cstdlib>
-#include <cmath>
-#include <array>
-#include <string>
-#include "Framework/AnalysisDataModel.h"
-#include "Framework/Configurable.h"
-#include "Framework/HistogramSpec.h"
+#include "Common/Core/TableHelper.h"
+#include "Common/DataModel/TrackSelectionTables.h"
 #include "Common/Tools/TrackTuner.h"
-#include "TableHelper.h"
+
+#include <CommonConstants/GeomConstants.h>
+#include <DetectorsBase/Propagator.h>
+#include <Framework/AnalysisDataModel.h>
+#include <Framework/AnalysisHelpers.h>
+#include <Framework/Configurable.h>
+#include <Framework/DataTypes.h>
+#include <Framework/HistogramRegistry.h>
+#include <Framework/HistogramSpec.h>
+#include <Framework/Logger.h>
+#include <ReconstructionDataFormats/DCA.h>
+#include <ReconstructionDataFormats/TrackParametrization.h>
+#include <ReconstructionDataFormats/TrackParametrizationWithError.h>
+
+#include <TH1.h>
+#include <TH2.h>
+
+#include <array>
+#include <cmath>
+#include <cstdlib>
+#include <memory>
+#include <string>
 
 //__________________________________________
 // track propagation module
@@ -81,17 +96,16 @@ class TrackPropagationModule
 
   // pointers to objs needed for operation
   std::shared_ptr<TH1> trackTunedTracks;
-  TrackTuner trackTunerObj;
 
   // Running variables
-  std::array<float, 2> mDcaInfo;
+  std::array<float, 2> mDcaInfo{};
   o2::dataformats::DCA mDcaInfoCov;
   o2::dataformats::VertexBase mVtx;
   o2::track::TrackParametrization<float> mTrackPar;
   o2::track::TrackParametrizationWithError<float> mTrackParCov;
 
   template <typename TConfigurableGroup, typename TInitContext, typename THistoRegistry>
-  void init(TConfigurableGroup const& cGroup, THistoRegistry& registry, TInitContext& initContext)
+  void init(TConfigurableGroup const& cGroup, TrackTuner& trackTunerObj, THistoRegistry& registry, TInitContext& initContext)
   {
     // Checking if the tables are requested in the workflow and enabling them
     fillTracks = isTableRequiredInWorkflow(initContext, "Tracks");
@@ -101,6 +115,27 @@ class TrackPropagationModule
 
     if (!fillTracks) {
       LOGF(info, "Track propagation to PV not required. Suppressing all further processing and logs.");
+    }
+
+    LOGF(info, " Track propagation table detection results:");
+    LOGF(info, " ---> Will generate Tracks table.");
+    if (fillTracksCov) {
+      LOGF(info, "---> Will generate TracksCov table.");
+    }
+    if (fillTracksDCA) {
+      LOGF(info, "---> Will generate TracksDCA table.");
+    }
+    if (fillTracksDCACov) {
+      LOGF(info, "---> Will generate TracksDCACov table.");
+    }
+    if (fillTracksCov) {
+      LOGF(info, "**************************************************************");
+      LOGF(info, " Warning: TracksCov has been requested due to a subscription!");
+      LOGF(info, " Please be mindful that generating track covariances requires");
+      LOGF(info, " a significant extra amount of CPU and memory. If not strictly");
+      LOGF(info, " necessary, requesting TracksCov should be avoided to save");
+      LOGF(info, " these additional resouces.");
+      LOGF(info, "**************************************************************");
     }
 
     /// TrackTuner initialization
@@ -133,7 +168,7 @@ class TrackPropagationModule
   }
 
   template <bool isMc, typename TConfigurableGroup, typename TCCDBLoader, typename TCollisions, typename TTracks, typename TOutputGroup, typename THistoRegistry>
-  void fillTrackTables(TConfigurableGroup const& cGroup, TCCDBLoader const& ccdbLoader, TCollisions const& collisions, TTracks const& tracks, TOutputGroup& cursors, THistoRegistry& registry)
+  void fillTrackTables(TConfigurableGroup const& cGroup, TrackTuner& trackTunerObj, TCCDBLoader const& ccdbLoader, TCollisions const& collisions, TTracks const& tracks, TOutputGroup& cursors, THistoRegistry& registry)
   {
     if (!fillTracks) {
       return; // suppress everything
