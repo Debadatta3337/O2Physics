@@ -22,12 +22,16 @@
 #endif
 
 #include "PWGHF/Core/CentralityEstimation.h"
+#include "PWGHF/Core/DecayChannelsLegacy.h"
+#include "PWGHF/DataModel/AliasTables.h"
 #include "PWGHF/DataModel/CandidateReconstructionTables.h"
+#include "PWGHF/DataModel/TrackIndexSkimmingTables.h"
 #include "PWGHF/Utils/utilsBfieldCCDB.h"
 #include "PWGHF/Utils/utilsEvSelHf.h"
 #include "PWGLF/DataModel/LFStrangenessTables.h"
 #include "PWGLF/DataModel/mcCentrality.h"
 
+#include "Common/CCDB/ctpRateFetcher.h"
 #include "Common/Core/RecoDecay.h"
 #include "Common/Core/trackUtilities.h"
 #include "Common/DataModel/Centrality.h"
@@ -124,6 +128,7 @@ struct HfCandidateCreatorXic0Omegac0 {
   Configurable<std::string> ccdbPathLut{"ccdbPathLut", "GLO/Param/MatLUT", "Path for LUT parametrization"};
   Configurable<std::string> ccdbPathGrp{"ccdbPathGrp", "GLO/GRP/GRP", "Path of the grp file (Run 2)"};
   Configurable<std::string> ccdbPathGrpMag{"ccdbPathGrpMag", "GLO/Config/GRPMagField", "CCDB path of the GRPMagField object (Run 3)"};
+  Configurable<std::string> irSource{"irSource", "ZNC hadronic", "Estimator of the interaction rate (Recommended: pp --> T0VTX, Pb-Pb --> ZNC hadronic)"};
 
   // KFParticle process setting
   //  V0 cuts
@@ -142,6 +147,7 @@ struct HfCandidateCreatorXic0Omegac0 {
   Service<o2::ccdb::BasicCCDBManager> ccdb;
   o2::base::MatLayerCylSet* lut{};
   o2::base::Propagator::MatCorrType matCorr = o2::base::Propagator::MatCorrType::USEMatCorrLUT;
+  ctpRateFetcher mRateFetcher;
   int runNumber{-1};
   double magneticField{0.};
 
@@ -2230,10 +2236,12 @@ struct HfCandidateCreatorXic0Omegac0 {
 
       /// bitmask with event. selection info
       float centrality{-1.f};
+      const auto occupancy = o2::hf_occupancy::getOccupancyColl(collision, hfEvSel.occEstimator);
       const auto rejectionMask = hfEvSel.getHfCollisionRejectionMask<true, CentralityEstimator::None, aod::BCsWithTimestamps>(collision, centrality, ccdb, registry);
-
+      const auto bc = collision.template foundBC_as<aod::BCsWithTimestamps>();
+      const auto ir = mRateFetcher.fetch(ccdb.service, bc.timestamp(), bc.runNumber(), irSource, true); // Hz
       /// monitor the satisfied event selections
-      hfEvSel.fillHistograms(collision, rejectionMask, centrality);
+      hfEvSel.fillHistograms(collision, rejectionMask, centrality, occupancy, ir);
 
     } /// end loop over collisions
   }
@@ -2247,10 +2255,12 @@ struct HfCandidateCreatorXic0Omegac0 {
 
       /// bitmask with event. selection info
       float centrality{-1.f};
+      const auto occupancy = o2::hf_occupancy::getOccupancyColl(collision, hfEvSel.occEstimator);
       const auto rejectionMask = hfEvSel.getHfCollisionRejectionMask<true, CentralityEstimator::FT0C, aod::BCsWithTimestamps>(collision, centrality, ccdb, registry);
-
+      const auto bc = collision.template foundBC_as<aod::BCsWithTimestamps>();
+      const auto ir = mRateFetcher.fetch(ccdb.service, bc.timestamp(), bc.runNumber(), irSource, true); // Hz
       /// monitor the satisfied event selections
-      hfEvSel.fillHistograms(collision, rejectionMask, centrality);
+      hfEvSel.fillHistograms(collision, rejectionMask, centrality, occupancy, ir);
 
     } /// end loop over collisions
   }
@@ -2264,10 +2274,12 @@ struct HfCandidateCreatorXic0Omegac0 {
 
       /// bitmask with event. selection info
       float centrality{-1.f};
+      const auto occupancy = o2::hf_occupancy::getOccupancyColl(collision, hfEvSel.occEstimator);
       const auto rejectionMask = hfEvSel.getHfCollisionRejectionMask<true, CentralityEstimator::FT0M, aod::BCsWithTimestamps>(collision, centrality, ccdb, registry);
-
+      const auto bc = collision.template foundBC_as<aod::BCsWithTimestamps>();
+      const auto ir = mRateFetcher.fetch(ccdb.service, bc.timestamp(), bc.runNumber(), irSource, true); // Hz
       /// monitor the satisfied event selections
-      hfEvSel.fillHistograms(collision, rejectionMask, centrality);
+      hfEvSel.fillHistograms(collision, rejectionMask, centrality, occupancy, ir);
 
     } /// end loop over collisions
   }
