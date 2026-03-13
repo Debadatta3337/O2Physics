@@ -31,8 +31,8 @@
 #include "PWGLF/DataModel/LFStrangenessTables.h"
 #include "PWGLF/DataModel/mcCentrality.h"
 
-#include "Common/CCDB/ctpRateFetcher.h"
 #include "Common/Core/RecoDecay.h"
+#include "Common/Core/ZorroSummary.h"
 #include "Common/Core/trackUtilities.h"
 #include "Common/DataModel/Centrality.h"
 #include "Common/DataModel/EventSelection.h"
@@ -94,7 +94,6 @@ struct HfCandidateCreatorXicToXiPiPi {
   Configurable<std::string> ccdbPathLut{"ccdbPathLut", "GLO/Param/MatLUT", "Path for LUT parametrization"};
   Configurable<std::string> ccdbPathGrp{"ccdbPathGrp", "GLO/GRP/GRP", "Path of the grp file (Run 2)"};
   Configurable<std::string> ccdbPathGrpMag{"ccdbPathGrpMag", "GLO/Config/GRPMagField", "CCDB path of the GRPMagField object (Run 3)"};
-  Configurable<std::string> irSource{"irSource", "ZNC hadronic", "Estimator of the interaction rate (Recommended: pp --> T0VTX, Pb-Pb --> ZNC hadronic)"};
   // cascade preselections
   Configurable<bool> doCascadePreselection{"doCascadePreselection", true, "Use invariant mass and dcaXY cuts to preselect cascade candidates"};
   Configurable<double> massToleranceCascade{"massToleranceCascade", 0.01, "Invariant mass tolerance for cascade"};
@@ -113,10 +112,9 @@ struct HfCandidateCreatorXicToXiPiPi {
   Configurable<int> kfConstructMethod{"kfConstructMethod", 2, "Construct method of XicPlus: 0 fast mathematics without constraint of fixed daughter particle masses, 2 daughter particle masses stay fixed in construction process"};
   Configurable<bool> rejDiffCollTrack{"rejDiffCollTrack", true, "Reject tracks coming from different collisions (effective only for KFParticle w/o derived data)"};
 
-  Service<o2::ccdb::BasicCCDBManager> ccdb;
+  Service<o2::ccdb::BasicCCDBManager> ccdb{};
   o2::base::MatLayerCylSet* lut{};
   o2::base::Propagator::MatCorrType matCorr = o2::base::Propagator::MatCorrType::USEMatCorrLUT;
-  ctpRateFetcher mRateFetcher;
 
   o2::vertexing::DCAFitterN<3> df;
 
@@ -140,6 +138,7 @@ struct HfCandidateCreatorXicToXiPiPi {
   using TracksWCovExtraPidPrPi = soa::Join<aod::TracksWCovExtra, aod::TracksPidPr, aod::TracksPidPi>;
 
   HistogramRegistry registry{"registry"};
+  OutputObj<ZorroSummary> zorroSummary{"zorroSummary"};
 
   void init(InitContext const&)
   {
@@ -187,7 +186,7 @@ struct HfCandidateCreatorXicToXiPiPi {
     runNumber = 0;
 
     // initialize HF event selection helper
-    hfEvSel.init(registry);
+    hfEvSel.init(registry, &zorroSummary);
 
     // initialize 3-prong vertex fitter
     df.setPropagateToPCA(propagateToPCA);
@@ -346,7 +345,7 @@ struct HfCandidateCreatorXicToXiPiPi {
       massXiPi1 = RecoDecay::m(arrayMomentaXiPi1, std::array{MassXiMinus, MassPiPlus});
 
       // get uncertainty of the decay length
-      float phi, theta;
+      float phi{}, theta{};
       getPointDirection(std::array{primaryVertex.getX(), primaryVertex.getY(), primaryVertex.getZ()}, secondaryVertex, phi, theta);
       auto errorDecayLength = std::sqrt(getRotatedCovMatrixXX(covMatrixPV, phi, theta) + getRotatedCovMatrixXX(covMatrixSV, phi, theta));
       auto errorDecayLengthXY = std::sqrt(getRotatedCovMatrixXX(covMatrixPV, phi, 0.) + getRotatedCovMatrixXX(covMatrixSV, phi, 0.));
@@ -363,7 +362,7 @@ struct HfCandidateCreatorXicToXiPiPi {
       // Lambda daughters
       auto trackPosLambdaDaughter = casc.posTrack_as<TracksWCovDcaPidPrPi>();
       auto trackNegLambdaDaughter = casc.negTrack_as<TracksWCovDcaPidPrPi>();
-      float pPiFromLambda, pPrFromLambda, nSigTpcPiFromLambda, nSigTofPiFromLambda, nSigTpcPrFromLambda, nSigTofPrFromLambda;
+      float pPiFromLambda{}, pPrFromLambda{}, nSigTpcPiFromLambda{}, nSigTofPiFromLambda{}, nSigTpcPrFromLambda{}, nSigTofPrFromLambda{};
       if (signXic == +1) {
         pPiFromLambda = trackNegLambdaDaughter.p();
         nSigTpcPiFromLambda = trackNegLambdaDaughter.tpcNSigmaPi();
@@ -592,7 +591,7 @@ struct HfCandidateCreatorXicToXiPiPi {
 
       // mass of Xi-Pi0 pair
       KFParticle kfXiPi0;
-      float errMassXiPi0;
+      float errMassXiPi0{};
       const KFParticle* kfXiResonanceDaughtersPi0[2] = {&kfXi, &kfCharmBachelor0};
       kfXiPi0.SetConstructMethod(kfConstructMethod);
       try {
@@ -604,7 +603,7 @@ struct HfCandidateCreatorXicToXiPiPi {
 
       // mass of Xi-Pi1 pair
       KFParticle kfXiPi1;
-      float errMassXiPi1;
+      float errMassXiPi1{};
       const KFParticle* kfXiResonanceDaughtersPi1[2] = {&kfXi, &kfCharmBachelor1};
       kfXiPi1.SetConstructMethod(kfConstructMethod);
       try {
@@ -615,7 +614,7 @@ struct HfCandidateCreatorXicToXiPiPi {
       kfXiPi1.GetMass(massXiPi1, errMassXiPi1);
 
       // get invariant mass of Xic candidate
-      float errMassXiPiPi;
+      float errMassXiPiPi{};
       kfXicPlus.GetMass(massXiPiPi, errMassXiPiPi);
 
       // decay length of XicPlus
@@ -638,7 +637,7 @@ struct HfCandidateCreatorXicToXiPiPi {
       // Lambda daughters
       auto trackPosLambdaDaughter = casc.posTrack_as<TracksWCovExtraPidPrPi>();
       auto trackNegLambdaDaughter = casc.negTrack_as<TracksWCovExtraPidPrPi>();
-      float pPiFromLambda, pPrFromLambda, nSigTpcPiFromLambda, nSigTofPiFromLambda, nSigTpcPrFromLambda, nSigTofPrFromLambda;
+      float pPiFromLambda{}, pPrFromLambda{}, nSigTpcPiFromLambda{}, nSigTofPiFromLambda{}, nSigTpcPrFromLambda{}, nSigTofPrFromLambda{};
       if (signXic == +1) {
         pPiFromLambda = trackNegLambdaDaughter.p();
         nSigTpcPiFromLambda = trackNegLambdaDaughter.tpcNSigmaPi();
@@ -806,7 +805,7 @@ struct HfCandidateCreatorXicToXiPiPi {
       const auto occupancy = o2::hf_occupancy::getOccupancyColl(collision, hfEvSel.occEstimator);
       const auto rejectionMask = hfEvSel.getHfCollisionRejectionMask<true, CentralityEstimator::None, aod::BCsWithTimestamps>(collision, centrality, ccdb, registry);
       const auto bc = collision.template foundBC_as<aod::BCsWithTimestamps>();
-      const auto ir = mRateFetcher.fetch(ccdb.service, bc.timestamp(), bc.runNumber(), irSource, true); // Hz
+      const auto ir = hfEvSel.getInteractionRate(bc, ccdb); // Hz
       /// monitor the satisfied event selections
       hfEvSel.fillHistograms(collision, rejectionMask, centrality, occupancy, ir);
 
@@ -824,7 +823,7 @@ struct HfCandidateCreatorXicToXiPiPi {
       const auto occupancy = o2::hf_occupancy::getOccupancyColl(collision, hfEvSel.occEstimator);
       const auto rejectionMask = hfEvSel.getHfCollisionRejectionMask<true, CentralityEstimator::FT0C, aod::BCsWithTimestamps>(collision, centrality, ccdb, registry);
       const auto bc = collision.template foundBC_as<aod::BCsWithTimestamps>();
-      const auto ir = mRateFetcher.fetch(ccdb.service, bc.timestamp(), bc.runNumber(), irSource, true); // Hz
+      const auto ir = hfEvSel.getInteractionRate(bc, ccdb); // Hz
       /// monitor the satisfied event selections
       hfEvSel.fillHistograms(collision, rejectionMask, centrality, occupancy, ir);
 
@@ -842,7 +841,7 @@ struct HfCandidateCreatorXicToXiPiPi {
       const auto occupancy = o2::hf_occupancy::getOccupancyColl(collision, hfEvSel.occEstimator);
       const auto rejectionMask = hfEvSel.getHfCollisionRejectionMask<true, CentralityEstimator::FT0M, aod::BCsWithTimestamps>(collision, centrality, ccdb, registry);
       const auto bc = collision.template foundBC_as<aod::BCsWithTimestamps>();
-      const auto ir = mRateFetcher.fetch(ccdb.service, bc.timestamp(), bc.runNumber(), irSource, true); // Hz
+      const auto ir = hfEvSel.getInteractionRate(bc, ccdb); // Hz
       /// monitor the satisfied event selections
       hfEvSel.fillHistograms(collision, rejectionMask, centrality, occupancy, ir);
 

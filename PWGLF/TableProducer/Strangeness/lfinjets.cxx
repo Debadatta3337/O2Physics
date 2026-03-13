@@ -199,7 +199,7 @@ struct LFInJets {
     }
 
     // Define binning and axis specifications for multiplicity, eta, pT, PID, and invariant mass histograms
-    std::vector<double> multBinning = {0, 10, 20, 30, 40, 50, 60, 70, 80, 90, 100};
+    std::vector<double> multBinning = {0, 1, 5, 10, 20, 30, 40, 50, 60, 70, 80, 90, 100};
     AxisSpec multAxis = {multBinning, "FT0C percentile"};
     const AxisSpec ptAxis{100, 0.0, 10.0, "#it{p}_{T} (GeV/#it{c})"};
     const AxisSpec invMassK0sAxis{200, 0.44, 0.56, "m_{#pi#pi} (GeV/#it{c}^{2})"};
@@ -1149,6 +1149,10 @@ struct LFInJets {
                    pos.tpcNSigmaPr(),
                    neg.tpcNSigmaPi(),
                    pos.tpcNSigmaPi(),
+                   neg.tofNSigmaPr(),
+                   pos.tofNSigmaPr(),
+                   neg.tofNSigmaPi(),
+                   pos.tofNSigmaPi(),
                    collision.centFT0M(),
                    pos.tpcNClsCrossedRows(),
                    neg.tpcNClsCrossedRows(),
@@ -1229,6 +1233,12 @@ struct LFInJets {
                         pos.tpcNSigmaPi(),
                         bach.tpcNSigmaPi(),
                         bach.tpcNSigmaKa(),
+                        neg.tofNSigmaPr(),
+                        pos.tofNSigmaPr(),
+                        neg.tofNSigmaPi(),
+                        pos.tofNSigmaPi(),
+                        bach.tofNSigmaPi(),
+                        bach.tofNSigmaKa(),
                         collision.centFT0M(),
                         pos.tpcNClsCrossedRows(),
                         neg.tpcNClsCrossedRows(),
